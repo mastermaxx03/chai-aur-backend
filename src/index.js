@@ -2,10 +2,18 @@
 import {} from "dotenv/config";
 
 import connectDB from "./db/index.js";
-
+import e from "express";
 //database connection
-
-connectDB();
+const app = e();
+connectDB()
+  .then(() => {
+    app.listen(process.env.PORT || 8000, () => {
+      console.log(`Server is running at port : ${process.env.PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.log("Mongo db connection did not go through !!!", err);
+  });
 
 /*import e from "express";
 const app = e()(async () => {
