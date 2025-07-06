@@ -1,15 +1,23 @@
 import multer from "multer";
+import path from "path";
+import { fileURLToPath } from "url";
 
-// Configure disk storage - this is the middleware
+// --- This is a more robust way to handle paths in ES Modules ---
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+// ----------------------------------------------------------------
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "./public/temp");
+    // This now points to an absolute path, which is more reliable
+    const uploadPath = path.join(__dirname, "../../public/temp");
+    cb(null, uploadPath);
   },
   filename: (req, file, cb) => {
-    //const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9); not necessary rn
     cb(null, file.originalname);
   },
 });
 
-// Initialize multer with the storage configuration
-export const upload = multer({ storage });
+export const upload = multer({
+  storage,
+});

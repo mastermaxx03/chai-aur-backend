@@ -1,22 +1,31 @@
 import { v2 as cloudinary } from "cloudinary";
-import fs from "fs"; //fi;e system in nodejs-read write etc
+import fs from "fs";
+
+// This is the correct, secure configuration that reads from your .env file
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
+
 const uploadOncloudinary = async (localFilePath) => {
   try {
     if (!localFilePath) return null;
-    //upload file on cloodinary
+
+    // Upload the file on Cloudinary
     const response = await cloudinary.uploader.upload(localFilePath, {
-      resource_type: "auto", //to automatically detect the file type
+      resource_type: "auto",
     });
-    console.log("File uploaded successfully to Cloudinary", response.url);
+
+    // File has been uploaded successfully
+    fs.unlinkSync(localFilePath); // Remove the locally saved temporary file
     return response;
   } catch (error) {
-    fs.unlinkSync(localFilePath); //delete the locally saved file if upload fails
+    // This will now only run if there's a real upload error,
+    // like an invalid file type, not a config error.
+    fs.unlinkSync(localFilePath);
     return null;
   }
 };
+
 export { uploadOncloudinary };
