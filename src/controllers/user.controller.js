@@ -235,10 +235,13 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     },
     { new: true }
   ).select("-password");
+  //delete old avatar from cloudinary
+
   return res
     .status(200)
     .json(new ApiResponse(200, user, "Avatar image updated successfully"));
 });
+
 const updateUserCoverImage = asyncHandler(async (req, res) => {
   const coverImageLocalPath = req.file?.path;
   if (!coverImageLocalPath)
@@ -265,6 +268,72 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, user, "Cover image updated successfully"));
 });
 
+const getUserChannelProfile = asyncHandler(async (req, res) => {
+  //you access channel using its username usually
+  const { username } = req.params;
+  if (!username?.trim) throw new ApiError(400, "Username is missing");
+  const channel = await User.aggregatePaginate([
+    {
+      //match username to find channel
+      $match: {
+        username: username?.toLowerCase(),
+      },
+    },
+    {
+      //count the number of subscribers that channel has
+      $lookup: { from: "subscriptions" },
+      localField: "_id",
+      foreignField: "channel",
+      as: "subscribers",
+    },
+    {
+      //count no of channels it has subscribed to itself
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "subscriber",
+        as: "subscribedTo",
+      },
+    },
+    {
+      //counting & check if we have subscribed to it or not
+      $addFields: {
+        subscribersCount: { $size: "$subscribers" },
+        channelsSubscribedToCount: { $size: "$subscribedTo" },
+        isSubscribed: {
+          $condition: {
+            //if then else
+            if: { $in: [req.user?._id, "$subscribers.subscriber"] },
+            then: true,
+            else: false,
+          },
+        },
+      },
+    },
+    {
+      //to pass on selective values
+      $project: {
+        fullName: 1,
+        username: 1,
+        subscribersCount: 1,
+        channelsSubscribedToCount: 1,
+        isSubscribed: 1,
+        avatar: 1,
+        coverImage: 1,
+        email: 1,
+      },
+    },
+  ]);
+  if (!channel?.length) {
+    throw new ApiError(400, "channel does not exist eh?!");
+  }
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, channel[0], "User channel fetched successfully")
+    );
+});
+
 export {
   registerUser,
   loginUser,
@@ -275,4 +344,5 @@ export {
   updateAccountDetails,
   updateUserAvatar,
   updateUserCoverImage,
+  getUserChannelProfile,
 };
